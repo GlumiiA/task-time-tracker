@@ -1,0 +1,38 @@
+@startuml
+hide circle
+skinparam linetype ortho
+
+entity "tasks" as tasks {
+  * id : BIGINT <<PK>>
+  --
+  title : VARCHAR(255)
+  description : TEXT
+  status : VARCHAR(20)  ' NEW | IN_PROGRESS | REVIEW | DONE | BLOCKED
+  ' assignee_id : BIGINT <<FK>>  ' (опционально, если реализуешь "назначить исполнителя")
+  created_at : TIMESTAMPTZ
+  updated_at : TIMESTAMPTZ
+}
+
+entity "employees" as employees {
+  * id : BIGINT <<PK>>
+  --
+  full_name : VARCHAR(255)
+  username : VARCHAR(100) <<UQ>>
+  role : VARCHAR(20)  ' ADMIN | WORKER
+}
+
+entity "time_records" as time_records {
+  * id : BIGINT <<PK>>
+  --
+  employee_id : BIGINT <<FK>>
+  task_id : BIGINT <<FK>>
+  start_time : TIMESTAMPTZ
+  end_time : TIMESTAMPTZ
+  work_description : TEXT
+  created_at : TIMESTAMPTZ
+}
+
+employees ||--o{ time_records : logs
+tasks     ||--o{ time_records : has
+
+@enduml
