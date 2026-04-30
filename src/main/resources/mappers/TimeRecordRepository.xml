@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="ru.aigul.tasktimetracker.repository.TimeRecordRepository">
+
+    <resultMap id="TimeRecordResultMap" type="ru.aigul.tasktimetracker.entity.TimeRecord">
+        <id property="id" column="id"/>
+        <result property="employeeId" column="employee_id"/>
+        <result property="taskId" column="task_id"/>
+        <result property="startTime" column="start_time"/>
+        <result property="endTime" column="end_time"/>
+        <result property="workDescription" column="work_description"/>
+        <result property="createdAt" column="created_at"/>
+    </resultMap>
+
+    <!--
+      Создаёт запись времени только если связанная задача находится в статусе DONE.
+      Возвращает число вставленных строк (0 если задача не DONE).
+    -->
+    <insert id="insertIfTaskDone" parameterType="ru.aigul.tasktimetracker.entity.TimeRecord" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO time_records (employee_id, task_id, start_time, end_time, work_description, created_at)
+        SELECT #{employeeId}, #{taskId}, #{startTime}, #{endTime}, #{workDescription}, CURRENT_TIMESTAMP
+        WHERE EXISTS (
+            SELECT 1
+            FROM tasks t
+            WHERE t.id = #{taskId}
+              AND t.status = 'DONE'
+        )
+    </insert>
+
+    <select id="findById" resultMap="TimeRecordResultMap">
+        SELECT id, employee_id, task_id, start_time, end_time, work_description, created_at
+        FROM time_records
+        WHERE id = #{id}
+    </select>
+
+    <select id="findByEmployeeId" resultMap="TimeRecordResultMap">
+        SELECT id, employee_id, task_id, start_time, end_time, work_description, created_at
+        FROM time_records
+        WHERE employee_id = #{employeeId}
+        ORDER BY start_time
+    </select>
+
+    <select id="findByTaskId" resultMap="TimeRecordResultMap">
+        SELECT id, employee_id, task_id, start_time, end_time, work_description, created_at
+        FROM time_records
+        WHERE task_id = #{taskId}
+        ORDER BY start_time
+    </select>
+
+    <select id="findByEmployeeAndPeriod" resultMap="TimeRecordResultMap">
+        <![CDATA[
+        SELECT id, employee_id, task_id, start_time, end_time, work_description, created_at
+        FROM time_records
+        WHERE employee_id = #{employeeId}
+          AND start_time >= #{from}
+          AND end_time <= #{to}
+        ORDER BY start_time
+        ]]>
+    </select>
+
+</mapper>
+

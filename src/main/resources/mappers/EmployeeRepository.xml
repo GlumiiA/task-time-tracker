@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="ru.aigul.tasktimetracker.repository.EmployeeRepository">
+
+    <resultMap id="EmployeeResultMap" type="ru.aigul.tasktimetracker.entity.Employee">
+        <id property="id" column="id"/>
+        <result property="fullName" column="full_name"/>
+        <result property="username" column="username"/>
+        <result property="password" column="password"/>
+        <result property="role" column="role"/>
+    </resultMap>
+
+    <insert id="insert" parameterType="ru.aigul.tasktimetracker.entity.Employee" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO employees (full_name, username, password, role)
+        VALUES (#{fullName}, #{username}, #{password}, #{role})
+    </insert>
+
+    <select id="findById" resultMap="EmployeeResultMap">
+        SELECT id, full_name, username, password, role
+        FROM employees
+        WHERE id = #{id}
+    </select>
+
+    <select id="findByUsername" resultMap="EmployeeResultMap">
+        SELECT id, full_name, username, password, role
+        FROM employees
+        WHERE username = #{username}
+    </select>
+
+    <select id="existsById" resultType="boolean">
+        SELECT COUNT(1) > 0
+        FROM employees
+        WHERE id = #{id}
+    </select>
+
+    <select id="findAll" resultMap="EmployeeResultMap">
+        SELECT id, full_name, username, password, role
+        FROM employees
+        ORDER BY id
+    </select>
+
+    <delete id="deleteById">
+        DELETE FROM employees
+        WHERE id = #{id}
+    </delete>
+
+</mapper>
+
