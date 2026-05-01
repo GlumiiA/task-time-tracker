@@ -6,6 +6,7 @@ import io.jsonwebtoken.Jws;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.io.Decoders;
+import io.jsonwebtoken.io.DecodingException;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.stereotype.Component;
 import ru.aigul.tasktimetracker.entity.Employee;
@@ -95,7 +96,7 @@ public class JwtProvider {
         String secret = properties.getSecret();
         try {
             return Decoders.BASE64.decode(secret);
-        } catch (IllegalArgumentException ex) {
+        } catch (DecodingException ex) {
             return secret.getBytes(StandardCharsets.UTF_8);
         }
     }
