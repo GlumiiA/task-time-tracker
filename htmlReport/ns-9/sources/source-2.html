@@ -1,0 +1,109 @@
+
+
+
+<!DOCTYPE html>
+<html id="htmlId">
+<head>
+  <meta http-equiv="Content-Type" content="text/html;charset=UTF-8"> 
+  <title>Coverage Report > TimeRecordRepository</title>
+  <style type="text/css">
+    @import "../../css/coverage.css";
+    @import "../../css/idea.min.css";
+  </style>
+  <script type="text/javascript" src="../../js/highlight.min.js"></script>
+  <script type="text/javascript" src="../../js/highlightjs-line-numbers.min.js"></script>
+</head>
+
+<body>
+<div class="content">
+<div class="breadCrumbs">
+Current scope:     <a href="../../index.html">all classes</a>
+    <span class="separator">|</span>
+    <a href="../index.html">ru.aigul.tasktimetracker.repository</a>
+</div>
+
+<h1>Coverage Summary for Class: TimeRecordRepository (ru.aigul.tasktimetracker.repository)</h1>
+
+<table class="coverageStats">
+
+<tr>
+  <th class="name">Class</th>
+</tr>
+  <tr>
+    <td class="name">TimeRecordRepository$MockitoMock$3p0EKQPW</td>
+  </tr>
+  <tr>
+    <td class="name">TimeRecordRepository$MockitoMock$3p0EKQPW$auxiliary$dX7bjBj3</td>
+  </tr>
+  <tr>
+    <td class="name">TimeRecordRepository$MockitoMock$3p0EKQPW$auxiliary$fOz7R29u</td>
+  </tr>
+<tr>
+  <td class="name"><strong>Total</strong></td>
+</tr>
+</table>
+
+<br/>
+<br/>
+
+
+<pre>
+<code class="sourceCode" id="sourceCode">&nbsp;package ru.aigul.tasktimetracker.repository;
+&nbsp;
+&nbsp;import org.apache.ibatis.annotations.Mapper;
+&nbsp;import org.apache.ibatis.annotations.Param;
+&nbsp;import ru.aigul.tasktimetracker.entity.TimeRecord;
+&nbsp;
+&nbsp;import java.time.LocalDateTime;
+&nbsp;import java.util.List;
+&nbsp;
+&nbsp;@Mapper
+&nbsp;public interface TimeRecordRepository {
+&nbsp;
+&nbsp;    /**
+&nbsp;     * Создаёт запись времени только если связанная задача находится в статусе DONE.
+&nbsp;     *
+&nbsp;     * @return число вставленных строк (0 если задача не DONE)
+&nbsp;     */
+&nbsp;    int insertIfTaskDone(TimeRecord timeRecord);
+&nbsp;
+&nbsp;    TimeRecord findById(@Param(&quot;id&quot;) long id);
+&nbsp;
+&nbsp;    List&lt;TimeRecord&gt; findByEmployeeId(@Param(&quot;employeeId&quot;) long employeeId);
+&nbsp;
+&nbsp;    List&lt;TimeRecord&gt; findByTaskId(@Param(&quot;taskId&quot;) long taskId);
+&nbsp;
+&nbsp;    List&lt;TimeRecord&gt; findByEmployeeAndPeriod(
+&nbsp;            @Param(&quot;employeeId&quot;) long employeeId,
+&nbsp;            @Param(&quot;from&quot;) LocalDateTime from,
+&nbsp;            @Param(&quot;to&quot;) LocalDateTime to
+&nbsp;    );
+&nbsp;}
+&nbsp;
+</code>
+</pre>
+</div>
+
+<script type="text/javascript">
+(function() {
+    var msie = false, msie9 = false;
+    /*@cc_on
+      msie = true;
+      @if (@_jscript_version >= 9)
+        msie9 = true;
+      @end
+    @*/
+
+    if (!msie || msie && msie9) {
+      hljs.highlightAll()
+      hljs.initLineNumbersOnLoad();
+    }
+})();
+</script>
+
+<div class="footer">
+    
+    <div style="float:right;">generated on 2026-05-01 20:08</div>
+</div>
+</body>
+</html>

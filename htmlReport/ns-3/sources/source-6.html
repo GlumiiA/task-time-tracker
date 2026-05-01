@@ -1,0 +1,166 @@
+
+
+
+<!DOCTYPE html>
+<html id="htmlId">
+<head>
+  <meta http-equiv="Content-Type" content="text/html;charset=UTF-8"> 
+  <title>Coverage Report > JwtProperties</title>
+  <style type="text/css">
+    @import "../../css/coverage.css";
+    @import "../../css/idea.min.css";
+  </style>
+  <script type="text/javascript" src="../../js/highlight.min.js"></script>
+  <script type="text/javascript" src="../../js/highlightjs-line-numbers.min.js"></script>
+</head>
+
+<body>
+<div class="content">
+<div class="breadCrumbs">
+Current scope:     <a href="../../index.html">all classes</a>
+    <span class="separator">|</span>
+    <a href="../index.html">ru.aigul.tasktimetracker.auth</a>
+</div>
+
+<h1>Coverage Summary for Class: JwtProperties (ru.aigul.tasktimetracker.auth)</h1>
+
+<table class="coverageStats">
+
+<tr>
+  <th class="name">Class</th>
+<th class="coverageStat 
+">
+  Method, %
+</th>
+<th class="coverageStat 
+">
+  Line, %
+</th>
+</tr>
+<tr>
+  <td class="name">JwtProperties</td>
+<td class="coverageStat">
+  <span class="percent">
+    100%
+  </span>
+  <span class="absValue">
+    (7/7)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    100%
+  </span>
+  <span class="absValue">
+    (7/7)
+  </span>
+</td>
+</tr>
+  <tr>
+    <td class="name">JwtProperties$$SpringCGLIB$$0</td>
+  </tr>
+  <tr>
+    <td class="name">JwtProperties$$SpringCGLIB$$1</td>
+  </tr>
+<tr>
+  <td class="name"><strong>Total</strong></td>
+<td class="coverageStat">
+  <span class="percent">
+    100%
+  </span>
+  <span class="absValue">
+    (7/7)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    100%
+  </span>
+  <span class="absValue">
+    (7/7)
+  </span>
+</td>
+</tr>
+</table>
+
+<br/>
+<br/>
+
+
+<pre>
+<code class="sourceCode" id="sourceCode">&nbsp;package ru.aigul.tasktimetracker.auth;
+&nbsp;
+&nbsp;import jakarta.validation.constraints.NotBlank;
+&nbsp;import jakarta.validation.constraints.NotNull;
+&nbsp;import jakarta.validation.constraints.Size;
+&nbsp;import org.springframework.boot.context.properties.ConfigurationProperties;
+&nbsp;import org.springframework.context.annotation.Configuration;
+&nbsp;import org.springframework.validation.annotation.Validated;
+&nbsp;
+&nbsp;import java.time.Duration;
+&nbsp;
+&nbsp;@Configuration
+&nbsp;@ConfigurationProperties(prefix = &quot;app.jwt&quot;)
+&nbsp;@Validated
+<b class="fc">&nbsp;public class JwtProperties {</b>
+&nbsp;    @NotBlank
+&nbsp;    @Size(min = 32)
+&nbsp;    private String secret;
+&nbsp;
+&nbsp;    @NotBlank
+&nbsp;    private String issuer;
+&nbsp;
+&nbsp;    @NotNull
+&nbsp;    private Duration accessTokenTtl;
+&nbsp;
+&nbsp;    public String getSecret() {
+<b class="fc">&nbsp;        return secret;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public void setSecret(String secret) {
+<b class="fc">&nbsp;        this.secret = secret;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public String getIssuer() {
+<b class="fc">&nbsp;        return issuer;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public void setIssuer(String issuer) {
+<b class="fc">&nbsp;        this.issuer = issuer;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public Duration getAccessTokenTtl() {
+<b class="fc">&nbsp;        return accessTokenTtl;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public void setAccessTokenTtl(Duration accessTokenTtl) {
+<b class="fc">&nbsp;        this.accessTokenTtl = accessTokenTtl;</b>
+&nbsp;    }
+&nbsp;}
+</code>
+</pre>
+</div>
+
+<script type="text/javascript">
+(function() {
+    var msie = false, msie9 = false;
+    /*@cc_on
+      msie = true;
+      @if (@_jscript_version >= 9)
+        msie9 = true;
+      @end
+    @*/
+
+    if (!msie || msie && msie9) {
+      hljs.highlightAll()
+      hljs.initLineNumbersOnLoad();
+    }
+})();
+</script>
+
+<div class="footer">
+    
+    <div style="float:right;">generated on 2026-05-01 20:08</div>
+</div>
+</body>
+</html>

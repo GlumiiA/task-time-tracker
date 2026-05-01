@@ -1,0 +1,55 @@
+@startuml
+title Создание записи рабочего времени
+
+actor Employee as employee
+participant "TimeRecordController" as controller
+participant "TimeRecordService" as service
+participant "EmployeeRepository" as employeeRepo
+participant "TaskRepository" as taskRepo
+participant "TimeRecordRepository" as timeRecordRepo
+database "Database" as db
+
+employee -> controller: POST /api/time-records\nAuthorization: Bearer token
+controller -> service: createTimeRecord(request, principal)
+
+service -> service: validateRequest(request)
+service -> service: validatePrincipalAccess(employeeId, principal)
+
+service -> employeeRepo: existsById(employeeId)
+employeeRepo -> db: SELECT employee
+db --> employeeRepo: exists / not exists
+employeeRepo --> service: result
+
+alt employee not found
+    service --> controller: NotFoundException
+    controller --> employee: 404 Not Found
+else employee exists
+    service -> taskRepo: findById(taskId)
+    taskRepo -> db: SELECT task
+    db --> taskRepo: task / null
+    taskRepo --> service: result
+
+    alt task not found
+        service --> controller: NotFoundException
+        controller --> employee: 404 Not Found
+    else task exists
+        service -> timeRecordRepo: insertIfTaskDone(record)
+        timeRecordRepo -> db: INSERT ... WHERE task.status = 'DONE'
+        db --> timeRecordRepo: inserted rows count
+        timeRecordRepo --> service: count
+
+        alt task status is not DONE
+            service --> controller: ConflictException
+            controller --> employee: 409 Conflict
+        else record created
+            service -> timeRecordRepo: findById(recordId)
+            timeRecordRepo -> db: SELECT time_record
+            db --> timeRecordRepo: saved record
+            timeRecordRepo --> service: TimeRecord
+            service --> controller: TimeRecord
+            controller --> employee: 201 Created + TimeRecordDto
+        end
+    end
+end
+
+@enduml
