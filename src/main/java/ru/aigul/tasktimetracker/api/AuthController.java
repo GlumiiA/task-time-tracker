@@ -8,7 +8,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import ru.aigul.tasktimetracker.dto.LoginRequestDto;
 import ru.aigul.tasktimetracker.dto.LoginResponseDto;
-import ru.aigul.tasktimetracker.entity.Employee;
 import ru.aigul.tasktimetracker.mapper.EmployeeMapper;
 import ru.aigul.tasktimetracker.service.AuthService;
 
@@ -22,7 +21,7 @@ public class AuthController {
 
     @PostMapping("/login")
     public LoginResponseDto login(@Valid @RequestBody LoginRequestDto request) {
-        Employee employee = authService.login(request.username(), request.password());
-        return employeeMapper.toLoginResponse(employee);
+        String accessToken = authService.login(request.username(), request.password());
+        return employeeMapper.toLoginResponse(accessToken);
     }
 }

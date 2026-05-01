@@ -3,6 +3,7 @@ package ru.aigul.tasktimetracker.api;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -13,6 +14,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import ru.aigul.tasktimetracker.auth.JwtPrincipal;
 import ru.aigul.tasktimetracker.dto.AssignTaskDto;
 import ru.aigul.tasktimetracker.dto.CreateTaskDto;
 import ru.aigul.tasktimetracker.dto.TaskDto;
@@ -34,8 +36,11 @@ public class TaskController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public TaskDto createTask(@Valid @RequestBody CreateTaskDto request) {
-        Task task = taskService.createTask(request.title(), request.description());
+    public TaskDto createTask(
+            @AuthenticationPrincipal JwtPrincipal principal,
+            @Valid @RequestBody CreateTaskDto request
+    ) {
+        Task task = taskService.createTask(request.title(), request.description(), request.assigneeId(), principal.getId());
         return taskMapper.toDto(task);
     }
 
@@ -45,9 +50,12 @@ public class TaskController {
     }
 
     @GetMapping
-    public List<TaskDto> getTasks(@RequestParam(required = false) Long assigneeId,
-                                  @RequestParam(required = false) String status) {
-        return taskService.getTasks(assigneeId, status).stream()
+    public List<TaskDto> getTasks(
+            @AuthenticationPrincipal JwtPrincipal principal,
+            @RequestParam(required = false) Long assigneeId,
+            @RequestParam(required = false) String status
+    ) {
+        return taskService.getTasksForUser(principal, assigneeId, status).stream()
                 .map(taskMapper::toDto)
                 .toList();
     }

@@ -19,6 +19,9 @@ public class Task {
     /** FK на employees.id (назначенный исполнитель), может быть null */
     private Long assigneeId;
 
+    /** FK на employees.id (создатель) */
+    private Long createdBy;
+
     private LocalDateTime createdAt;
 
     private LocalDateTime updatedAt;

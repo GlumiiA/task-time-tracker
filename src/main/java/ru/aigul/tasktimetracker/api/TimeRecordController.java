@@ -3,11 +3,13 @@ package ru.aigul.tasktimetracker.api;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import ru.aigul.tasktimetracker.auth.JwtPrincipal;
 import ru.aigul.tasktimetracker.dto.CreateTimeRecordDto;
 import ru.aigul.tasktimetracker.dto.TimeRecordDto;
 import ru.aigul.tasktimetracker.entity.TimeRecord;
@@ -24,8 +26,11 @@ public class TimeRecordController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public TimeRecordDto createTimeRecord(@Valid @RequestBody CreateTimeRecordDto request) {
-        TimeRecord record = timeRecordService.createTimeRecord(request);
+    public TimeRecordDto createTimeRecord(
+            @AuthenticationPrincipal JwtPrincipal principal,
+            @Valid @RequestBody CreateTimeRecordDto request
+    ) {
+        TimeRecord record = timeRecordService.createTimeRecord(request, principal);
         return timeRecordMapper.toDto(record);
     }
 }
