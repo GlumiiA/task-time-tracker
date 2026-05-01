@@ -186,6 +186,7 @@ PlantUML-файл: [docs/diagramms/sequence-time-record.svg](docs/diagramms/sequ
 - Интеграционные тесты DAO-слоя с взаимодействием с PostgreSQL через Testcontainers.
 - Unit и интеграционные тесты охватывают основные сервисы и контроллеры, общий coverage превышает 90%.
 - Сценарии использования были проверены на основе документа [use-case-tables.md](docs/use-case-tables.md). 
+- API-тестирование через Postman: реализованы основные сценарии, которые можно проверить, импортировав коллекцию: [task-time-tracker.postman_collection.json](docs/postman/task-time-tracker.postman_collection.json).
 
 ### Покрытие тестами по Use Cases
 | Use Case                      | Unit tests | Integration/API tests |
