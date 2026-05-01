@@ -26,6 +26,25 @@ body {
     gap: 16px;
 }
 
+.hero-panel {
+    margin-bottom: 20px;
+}
+
+.header-actions {
+    align-items: center;
+    display: flex;
+    gap: 12px;
+}
+
+.eyebrow {
+    color: #2563eb;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    margin: 0 0 4px;
+    text-transform: uppercase;
+}
+
 h1,
 h2 {
     margin: 0 0 12px;
@@ -45,6 +64,28 @@ h2 {
     margin: 4px 0;
 }
 
+.hint {
+    line-height: 1.45;
+}
+
+.badge {
+    align-items: center;
+    background: #eef2ff;
+    border: 1px solid #c7d2fe;
+    border-radius: 999px;
+    color: #3730a3;
+    display: inline-flex;
+    font-size: 13px;
+    font-weight: 700;
+    padding: 6px 12px;
+}
+
+.status-badge {
+    background: #ecfdf3;
+    border-color: #abefc6;
+    color: #027a48;
+}
+
 .grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -52,11 +93,31 @@ h2 {
     margin: 20px 0;
 }
 
+.form-stack {
+    display: grid;
+    gap: 12px;
+}
+
 .panel {
     background: #ffffff;
     border: 1px solid #d0d5dd;
     border-radius: 8px;
     padding: 16px;
+}
+
+.notice-box {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 12px 14px;
+}
+
+.readonly-value {
+    background: #f8fafc;
+    border: 1px solid #cfd4dc;
+    border-radius: 6px;
+    min-height: 36px;
+    padding: 8px 10px;
 }
 
 label {
@@ -122,6 +183,15 @@ button,
     color: #b42318;
 }
 
+.check-list {
+    margin: 8px 0 0;
+    padding-left: 18px;
+}
+
+.compact-list li {
+    margin-bottom: 6px;
+}
+
 .filters,
 .actions {
     display: flex;
@@ -137,10 +207,14 @@ button,
     flex-direction: column;
 }
 
-.actions form {
+.action-form {
     display: grid;
-    grid-template-columns: 140px 52px;
+    grid-template-columns: 140px 96px;
     gap: 6px;
+}
+
+.action-form select {
+    min-width: 0;
 }
 
 .table-wrap {
@@ -174,6 +248,21 @@ th {
     .grid,
     .topbar {
         display: block;
+    }
+
+    .header-actions {
+        margin-top: 12px;
+    }
+
+    .filters,
+    .actions,
+    .action-form {
+        display: block;
+    }
+
+    .actions form,
+    .action-form {
+        margin-bottom: 8px;
     }
 
     .panel {

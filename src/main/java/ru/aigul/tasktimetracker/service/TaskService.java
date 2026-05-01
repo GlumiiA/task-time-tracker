@@ -7,6 +7,7 @@ import ru.aigul.tasktimetracker.entity.Role;
 import ru.aigul.tasktimetracker.entity.Status;
 import ru.aigul.tasktimetracker.entity.Task;
 import ru.aigul.tasktimetracker.exception.BadRequestException;
+import ru.aigul.tasktimetracker.exception.ForbiddenException;
 import ru.aigul.tasktimetracker.exception.InternalServerException;
 import ru.aigul.tasktimetracker.exception.NotFoundException;
 import ru.aigul.tasktimetracker.repository.EmployeeRepository;
@@ -22,17 +23,15 @@ public class TaskService {
     private final TaskRepository taskRepository;
     private final EmployeeRepository employeeRepository;
 
-    public Task createTask(String title, String description, Long assigneeId, Long creatorId) {
+    public Task createTask(String title, String description, Long assigneeId, JwtPrincipal principal) {
         validateText(title, "title", 100, true);
         validateText(description, "description", 500, false);
         validatePositive(assigneeId, "assigneeId");
-        validatePositive(creatorId, "creatorId");
+        validatePrincipal(principal);
+        requireAdmin(principal, "Only admin can create tasks");
 
         if (assigneeId != null && !employeeRepository.existsById(assigneeId)) {
             throw new NotFoundException("Employee not found: " + assigneeId);
-        }
-        if (creatorId != null && !employeeRepository.existsById(creatorId)) {
-            throw new NotFoundException("Employee not found: " + creatorId);
         }
 
         Task task = new Task();
@@ -40,7 +39,7 @@ public class TaskService {
         task.setDescription(description);
         task.setStatus(Status.NEW);
         task.setAssigneeId(assigneeId);
-        task.setCreatedBy(creatorId);
+        task.setCreatedBy(principal.getId());
 
         int inserted = taskRepository.insert(task);
         if (inserted == 0) {
@@ -90,21 +89,32 @@ public class TaskService {
     }
 
     public void updateStatus(Long taskId, Status status) {
+        updateStatus(taskId, status, null);
+    }
+
+    public void updateStatus(Long taskId, Status status, JwtPrincipal principal) {
         validatePositive(taskId, "taskId");
         if (status == null) {
             throw new BadRequestException("status is required");
         }
 
-        getTaskOrThrow(taskId);
+        Task task = getTaskOrThrow(taskId);
+        validatePrincipal(principal);
+        if (principal.getRole() != Role.ADMIN && !principal.getId().equals(task.getAssigneeId())) {
+            throw new ForbiddenException("Cannot change status of another employee's task");
+        }
+
         int updated = taskRepository.updateStatus(taskId, status);
         if (updated == 0) {
             throw new NotFoundException("Task not found: " + taskId);
         }
     }
 
-    public void assignTask(Long taskId, Long employeeId) {
+    public void assignTask(Long taskId, Long employeeId, JwtPrincipal principal) {
         validatePositive(taskId, "taskId");
         validatePositive(employeeId, "employeeId");
+        validatePrincipal(principal);
+        requireAdmin(principal, "Only admin can assign tasks");
         getTaskOrThrow(taskId);
 
         if (!employeeRepository.existsById(employeeId)) {
@@ -117,10 +127,12 @@ public class TaskService {
         }
     }
 
-    public Task updateTask(Long taskId, String title, String description) {
+    public Task updateTask(Long taskId, String title, String description, JwtPrincipal principal) {
         validatePositive(taskId, "taskId");
         validateText(title, "title", 100, true);
         validateText(description, "description", 500, false);
+        validatePrincipal(principal);
+        requireAdmin(principal, "Only admin can edit tasks");
 
         Task task = getTaskOrThrow(taskId);
         task.setTitle(title.trim());
@@ -132,6 +144,18 @@ public class TaskService {
         }
 
         return getTaskOrThrow(taskId);
+    }
+
+    public void deleteTask(Long taskId, JwtPrincipal principal) {
+        validatePositive(taskId, "taskId");
+        validatePrincipal(principal);
+        requireAdmin(principal, "Only admin can delete tasks");
+        getTaskOrThrow(taskId);
+
+        int deleted = taskRepository.deleteById(taskId);
+        if (deleted == 0) {
+            throw new NotFoundException("Task not found: " + taskId);
+        }
     }
 
     private Status parseStatusOrNull(String status) {
@@ -148,6 +172,12 @@ public class TaskService {
     private void validatePrincipal(JwtPrincipal principal) {
         if (principal == null || principal.getId() == null || principal.getRole() == null) {
             throw new BadRequestException("Invalid authenticated user");
+        }
+    }
+
+    private void requireAdmin(JwtPrincipal principal, String message) {
+        if (principal.getRole() != Role.ADMIN) {
+            throw new ForbiddenException(message);
         }
     }
 

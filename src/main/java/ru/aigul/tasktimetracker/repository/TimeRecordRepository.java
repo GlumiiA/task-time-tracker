@@ -19,6 +19,8 @@ public interface TimeRecordRepository {
 
     TimeRecord findById(@Param("id") long id);
 
+    List<TimeRecord> findAll();
+
     List<TimeRecord> findByEmployeeId(@Param("employeeId") long employeeId);
 
     List<TimeRecord> findByTaskId(@Param("taskId") long taskId);

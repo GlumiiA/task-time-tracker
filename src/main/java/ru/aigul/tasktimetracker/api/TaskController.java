@@ -4,6 +4,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -40,13 +41,22 @@ public class TaskController {
             @AuthenticationPrincipal JwtPrincipal principal,
             @Valid @RequestBody CreateTaskDto request
     ) {
-        Task task = taskService.createTask(request.title(), request.description(), request.assigneeId(), principal.getId());
+        Task task = taskService.createTask(request.title(), request.description(), request.assigneeId(), principal);
         return taskMapper.toDto(task);
     }
 
     @GetMapping("/{id}")
     public TaskDto getTaskById(@PathVariable Long id) {
         return taskMapper.toDto(taskService.getTaskOrThrow(id));
+    }
+
+    @DeleteMapping("/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deleteTask(
+            @PathVariable Long id,
+            @AuthenticationPrincipal JwtPrincipal principal
+    ) {
+        taskService.deleteTask(id, principal);
     }
 
     @GetMapping
@@ -63,25 +73,28 @@ public class TaskController {
     @PatchMapping("/{id}/status")
     public void updateStatus(
             @PathVariable Long id,
+            @AuthenticationPrincipal JwtPrincipal principal,
             @Valid @RequestBody UpdateStatusDto request
     ) {
-        taskService.updateStatus(id, request.status());
+        taskService.updateStatus(id, request.status(), principal);
     }
 
     @PatchMapping("/{id}/assignee")
     public void assignTask(
             @PathVariable Long id,
+            @AuthenticationPrincipal JwtPrincipal principal,
             @Valid @RequestBody AssignTaskDto request
     ) {
-        taskService.assignTask(id, request.assigneeId());
+        taskService.assignTask(id, request.assigneeId(), principal);
     }
 
     @PutMapping("/{id}")
     public TaskDto updateTask(
             @PathVariable Long id,
+            @AuthenticationPrincipal JwtPrincipal principal,
             @Valid @RequestBody UpdateTaskDto request
     ) {
-        Task task = taskService.updateTask(id, request.title(), request.description());
+        Task task = taskService.updateTask(id, request.title(), request.description(), principal);
         return taskMapper.toDto(task);
     }
 }

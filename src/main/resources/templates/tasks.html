@@ -3,88 +3,122 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Tasks</title>
+gh    <title th:text="${pageTitle}">Task Time Tracker</title>
     <link rel="stylesheet" href="/ui.css">
 </head>
 <body>
 <main class="page">
-    <header class="topbar">
+    <header class="topbar panel hero-panel">
         <div>
-            <h1>Task Time Tracker</h1>
-            <p class="muted" th:text="${principal.username + ' / ' + principal.role}"></p>
+            <p class="eyebrow">Task Time Tracker</p>
+            <h1 th:text="${pageTitle}">Task Time Tracker</h1>
+            <p class="muted" th:text="${principal.username + ' · ' + principal.role}"></p>
         </div>
-        <form method="post" action="/ui/logout">
-            <button class="secondary" type="submit">Выйти</button>
-        </form>
+        <div class="header-actions">
+            <span class="badge" th:text="${principal.admin ? 'Администратор' : 'Сотрудник'}"></span>
+            <form method="post" action="/ui/logout">
+                <button class="secondary" type="submit">Выйти</button>
+            </form>
+        </div>
     </header>
 
     <div class="alert success" th:if="${message}" th:text="${message}"></div>
     <div class="alert error" th:if="${error}" th:text="${error}"></div>
 
     <section class="grid">
-        <form class="panel" method="post" action="/ui/tasks">
+        <article class="panel" th:if="${principal.admin}">
             <h2>Создать задачу</h2>
-            <label>
-                Название
-                <input name="title" required maxlength="100">
-            </label>
-            <label>
-                Описание
-                <textarea name="description" maxlength="500"></textarea>
-            </label>
-            <label>
-                Исполнитель
-                <select name="assigneeId">
-                    <option value="">Без исполнителя</option>
-                    <option th:each="employee : ${employees}"
-                            th:value="${employee.id}"
-                            th:text="${employee.id + ' - ' + employee.username}"></option>
-                </select>
-            </label>
-            <button type="submit">Создать</button>
-        </form>
+            <p class="muted">Доступно только администратору.</p>
+            <form class="form-stack" method="post" action="/ui/tasks">
+                <label>
+                    Название
+                    <input name="title" required maxlength="100" placeholder="Например, подготовить отчёт">
+                </label>
+                <label>
+                    Описание
+                    <textarea name="description" maxlength="500" placeholder="Коротко опишите результат"></textarea>
+                </label>
+                <label>
+                    Исполнитель
+                    <select name="assigneeId">
+                        <option value="">Без исполнителя</option>
+                        <option th:each="employee : ${employees}"
+                                th:value="${employee.id}"
+                                th:text="${(employee.fullName != null && !employee.fullName.isBlank()) ? employee.fullName + ' (' + employee.username + ')' : employee.username}"></option>
+                    </select>
+                </label>
+                <p class="muted hint">Назначение исполнителя сразу переводит задачу в <strong>IN_PROGRESS</strong>.</p>
+                <button type="submit">Создать задачу</button>
+            </form>
+        </article>
 
-        <form class="panel" method="post" action="/ui/time-records">
+        <article class="panel" th:unless="${principal.admin}">
+            <h2>Создание задач</h2>
+            <p class="muted">Создавать задачи и назначать исполнителей может только администратор.</p>
+            <div class="notice-box">
+                <p>Вы можете:</p>
+                <ul class="check-list compact-list">
+                    <li>просматривать только свои задачи;</li>
+                    <li>менять статус своих задач;</li>
+                    <li>создавать записи рабочего времени.</li>
+                </ul>
+            </div>
+        </article>
+
+        <article class="panel">
             <h2>Записать время</h2>
-            <label>
-                Сотрудник
-                <select name="employeeId" required>
-                    <option th:each="employee : ${employees}"
-                            th:value="${employee.id}"
-                            th:selected="${employee.id == principal.id}"
-                            th:text="${employee.id + ' - ' + employee.username}"></option>
-                </select>
-            </label>
-            <label>
-                Задача
-                <input name="taskId" type="number" min="1" required>
-            </label>
-            <label>
-                Начало
-                <input name="startTime" type="datetime-local" required>
-            </label>
-            <label>
-                Конец
-                <input name="endTime" type="datetime-local" required>
-            </label>
-            <label>
-                Что сделано
-                <textarea name="workDescription" maxlength="1000"></textarea>
-            </label>
-            <button type="submit">Сохранить</button>
-        </form>
+            <p class="muted">Запись времени создается только для задачи со статусом <strong>DONE</strong>.</p>
+            <form class="form-stack" method="post" action="/ui/time-records">
+                <div th:if="${principal.admin}">
+                    <label>
+                        Сотрудник
+                        <select name="employeeId" required>
+                            <option th:each="employee : ${employees}"
+                                    th:value="${employee.id}"
+                                    th:selected="${employee.id == principal.id}"
+                                    th:text="${(employee.fullName != null && !employee.fullName.isBlank()) ? employee.fullName + ' (' + employee.username + ')' : employee.username}"></option>
+                        </select>
+                    </label>
+                </div>
+                <div th:unless="${principal.admin}">
+                    <label>Сотрудник</label>
+                    <input type="hidden" name="employeeId" th:value="${principal.id}">
+                    <div class="readonly-value" th:text="${principal.username}"></div>
+                </div>
+                <label>
+                    Задача
+                    <input name="taskId" type="number" min="1" required placeholder="ID задачи">
+                </label>
+                <label>
+                    Начало
+                    <input name="startTime" type="datetime-local" required>
+                </label>
+                <label>
+                    Конец
+                    <input name="endTime" type="datetime-local" required>
+                </label>
+                <label>
+                    Что сделано
+                    <textarea name="workDescription" maxlength="1000" placeholder="Кратко опишите выполненную работу"></textarea>
+                </label>
+                <button type="submit">Сохранить время</button>
+            </form>
+        </article>
     </section>
 
     <section class="panel">
         <h2>Задачи</h2>
+        <p class="muted" th:if="${principal.admin}">Администратор видит все задачи и может фильтровать их по исполнителю и статусу.</p>
+        <p class="muted" th:unless="${principal.admin}">Показываются только задачи, назначенные вам.</p>
         <form class="filters" method="get" action="/ui/tasks">
-            <select name="assigneeId">
+            <select th:if="${principal.admin}" name="assigneeId">
                 <option value="">Все исполнители</option>
                 <option th:each="employee : ${employees}"
                         th:value="${employee.id}"
                         th:selected="${employee.id == selectedAssigneeId}"
-                        th:text="${employee.id + ' - ' + employee.username}"></option>
+                        th:text="${(employee.fullName != null && !employee.fullName.isBlank()) ? employee.fullName + ' (' + employee.username + ')' : employee.username}"></option>
             </select>
+            <input th:unless="${principal.admin}" type="hidden" name="assigneeId" th:value="${principal.id}">
             <select name="status">
                 <option value="">Все статусы</option>
                 <option th:each="status : ${statuses}"
@@ -105,6 +139,7 @@
                     <th>Статус</th>
                     <th>Исполнитель</th>
                     <th>Автор</th>
+                    <th>Обновлено</th>
                     <th>Действия</th>
                 </tr>
                 </thead>
@@ -113,13 +148,18 @@
                     <td th:text="${task.id}"></td>
                     <td>
                         <strong th:text="${task.title}"></strong>
-                        <div class="muted" th:text="${task.description}"></div>
+                        <div class="muted" th:if="${task.description != null && !task.description.isBlank()}" th:text="${task.description}"></div>
+                        <div class="muted" th:unless="${task.description != null && !task.description.isBlank()}">Без описания</div>
                     </td>
-                    <td th:text="${task.status}"></td>
-                    <td th:text="${task.assigneeId}"></td>
-                    <td th:text="${task.createdBy}"></td>
+                    <td><span class="badge status-badge" th:text="${task.status}"></span></td>
+                    <td>
+                        <div th:text="${task.assigneeName}"></div>
+                        <div class="muted" th:if="${task.assigneeId != null}" th:text="${'ID ' + task.assigneeId}"></div>
+                    </td>
+                    <td th:text="${task.createdByName}"></td>
+                    <td th:text="${task.updatedAt != null ? #temporals.format(task.updatedAt, 'dd.MM.yyyy HH:mm') : '—'}"></td>
                     <td class="actions">
-                        <form method="post" action="/ui/tasks/status">
+                        <form class="action-form" method="post" action="/ui/tasks/status">
                             <input type="hidden" name="taskId" th:value="${task.id}">
                             <select name="status">
                                 <option th:each="status : ${statuses}"
@@ -127,22 +167,24 @@
                                         th:selected="${status == task.status}"
                                         th:text="${status}"></option>
                             </select>
-                            <button class="secondary" type="submit">OK</button>
+                            <button class="secondary" type="submit">Сменить</button>
                         </form>
-                        <form method="post" action="/ui/tasks/assignee">
+                        <form class="action-form" th:if="${principal.admin}" method="post" action="/ui/tasks/assignee">
                             <input type="hidden" name="taskId" th:value="${task.id}">
                             <select name="assigneeId" required>
+                                <option value="">Назначить</option>
                                 <option th:each="employee : ${employees}"
                                         th:value="${employee.id}"
                                         th:selected="${employee.id == task.assigneeId}"
-                                        th:text="${employee.username}"></option>
+                                        th:text="${(employee.fullName != null && !employee.fullName.isBlank()) ? employee.fullName + ' (' + employee.username + ')' : employee.username}"></option>
                             </select>
-                            <button class="secondary" type="submit">OK</button>
+                            <button class="secondary" type="submit">Назначить</button>
                         </form>
+                        <p class="muted hint" th:if="${principal.admin}">Назначение исполнителя автоматически переводит задачу в <strong>IN_PROGRESS</strong>.</p>
                     </td>
                 </tr>
                 <tr th:if="${#lists.isEmpty(tasks)}">
-                    <td colspan="6" class="empty">Задач пока нет</td>
+                    <td colspan="7" class="empty">Задач пока нет</td>
                 </tr>
                 </tbody>
             </table>

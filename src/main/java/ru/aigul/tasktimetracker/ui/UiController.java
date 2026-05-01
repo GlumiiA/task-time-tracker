@@ -7,7 +7,6 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
@@ -15,12 +14,16 @@ import ru.aigul.tasktimetracker.auth.JwtPrincipal;
 import ru.aigul.tasktimetracker.dto.CreateTimeRecordDto;
 import ru.aigul.tasktimetracker.entity.Employee;
 import ru.aigul.tasktimetracker.entity.Status;
+import ru.aigul.tasktimetracker.entity.Task;
 import ru.aigul.tasktimetracker.repository.EmployeeRepository;
 import ru.aigul.tasktimetracker.service.AuthService;
 import ru.aigul.tasktimetracker.service.TaskService;
 import ru.aigul.tasktimetracker.service.TimeRecordService;
 
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Controller
 @RequiredArgsConstructor
@@ -82,12 +85,19 @@ public class UiController {
             Model model
     ) {
         JwtPrincipal principal = requirePrincipal(session);
+        List<Employee> employees = employeeRepository.findAll();
+        Map<Long, Employee> employeesById = employees.stream().collect(Collectors.toMap(Employee::getId, employee -> employee));
+        List<TaskRowView> taskRows = taskService.getTasksForUser(principal, assigneeId, status).stream()
+                .map(task -> toTaskRowView(task, employeesById))
+                .toList();
+
         model.addAttribute("principal", principal);
-        model.addAttribute("tasks", taskService.getTasksForUser(principal, assigneeId, status));
-        model.addAttribute("employees", employeeRepository.findAll());
+        model.addAttribute("tasks", taskRows);
+        model.addAttribute("employees", employees);
         model.addAttribute("statuses", Status.values());
         model.addAttribute("selectedAssigneeId", assigneeId);
         model.addAttribute("selectedStatus", status);
+        model.addAttribute("pageTitle", principal.isAdmin() ? "Панель администратора" : "Мои задачи");
         return "tasks";
     }
 
@@ -101,7 +111,7 @@ public class UiController {
     ) {
         JwtPrincipal principal = requirePrincipal(session);
         try {
-            taskService.createTask(title, description, assigneeId, principal.getId());
+            taskService.createTask(title, description, assigneeId, principal);
             redirectAttributes.addFlashAttribute("message", "Задача создана");
         } catch (RuntimeException ex) {
             redirectAttributes.addFlashAttribute("error", ex.getMessage());
@@ -116,9 +126,9 @@ public class UiController {
             HttpSession session,
             RedirectAttributes redirectAttributes
     ) {
-        requirePrincipal(session);
+        JwtPrincipal principal = requirePrincipal(session);
         try {
-            taskService.updateStatus(taskId, status);
+            taskService.updateStatus(taskId, status, principal);
             redirectAttributes.addFlashAttribute("message", "Статус обновлен");
         } catch (RuntimeException ex) {
             redirectAttributes.addFlashAttribute("error", ex.getMessage());
@@ -133,9 +143,9 @@ public class UiController {
             HttpSession session,
             RedirectAttributes redirectAttributes
     ) {
-        requirePrincipal(session);
+        JwtPrincipal principal = requirePrincipal(session);
         try {
-            taskService.assignTask(taskId, assigneeId);
+            taskService.assignTask(taskId, assigneeId, principal);
             redirectAttributes.addFlashAttribute("message", "Исполнитель назначен");
         } catch (RuntimeException ex) {
             redirectAttributes.addFlashAttribute("error", ex.getMessage());
@@ -177,6 +187,50 @@ public class UiController {
             throw new IllegalStateException("Login required");
         }
         return principal;
+    }
+
+    private TaskRowView toTaskRowView(Task task, Map<Long, Employee> employeesById) {
+        return new TaskRowView(
+                task.getId(),
+                task.getTitle(),
+                task.getDescription(),
+                task.getStatus(),
+                task.getAssigneeId(),
+                employeeDisplayName(task.getAssigneeId(), employeesById),
+                employeeDisplayName(task.getCreatedBy(), employeesById),
+                task.getCreatedAt(),
+                task.getUpdatedAt()
+        );
+    }
+
+    private String employeeDisplayName(Long employeeId, Map<Long, Employee> employeesById) {
+        if (employeeId == null) {
+            return "Не назначен";
+        }
+
+        Employee employee = employeesById.get(employeeId);
+        if (employee == null) {
+            return "Сотрудник #" + employeeId;
+        }
+
+        if (employee.getFullName() != null && !employee.getFullName().isBlank()) {
+            return employee.getFullName() + " (" + employee.getUsername() + ")";
+        }
+
+        return employee.getUsername();
+    }
+
+    private record TaskRowView(
+            Long id,
+            String title,
+            String description,
+            Status status,
+            Long assigneeId,
+            String assigneeName,
+            String createdByName,
+            LocalDateTime createdAt,
+            LocalDateTime updatedAt
+    ) {
     }
 
     @ExceptionHandler(IllegalStateException.class)

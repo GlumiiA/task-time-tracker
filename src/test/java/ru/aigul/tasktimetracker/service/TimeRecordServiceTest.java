@@ -21,6 +21,7 @@ import ru.aigul.tasktimetracker.repository.TaskRepository;
 import ru.aigul.tasktimetracker.repository.TimeRecordRepository;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -175,6 +176,58 @@ class TimeRecordServiceTest {
                 .hasMessageContaining("Invalid authenticated user");
     }
 
+    @Test
+    void getTimeRecordsReturnsAllRecordsForAdmin() {
+        JwtPrincipal principal = new JwtPrincipal(1L, "admin", Role.ADMIN);
+        TimeRecord first = record(1L, 2L, 5L, LocalDateTime.of(2026, 5, 1, 9, 0));
+        TimeRecord second = record(2L, 3L, 6L, LocalDateTime.of(2026, 5, 1, 11, 0));
+        when(timeRecordRepository.findAll()).thenReturn(List.of(first, second));
+
+        List<TimeRecord> result = timeRecordService.getTimeRecords(principal, null, null, null);
+
+        assertThat(result).containsExactly(first, second);
+        verify(timeRecordRepository).findAll();
+    }
+
+    @Test
+    void getTimeRecordsReturnsOwnRecordsForEmployee() {
+        JwtPrincipal principal = new JwtPrincipal(2L, "employee", Role.EMPLOYEE);
+        LocalDateTime start = LocalDateTime.of(2026, 5, 1, 9, 0);
+        TimeRecord first = record(1L, 2L, 5L, start);
+        TimeRecord second = record(2L, 2L, 6L, start.plusHours(3));
+        when(timeRecordRepository.findByEmployeeId(2L)).thenReturn(List.of(first, second));
+
+        List<TimeRecord> result = timeRecordService.getTimeRecords(
+                principal,
+                2L,
+                start,
+                start.plusHours(6)
+        );
+
+        assertThat(result).containsExactly(first, second);
+        verify(timeRecordRepository).findByEmployeeId(2L);
+    }
+
+    @Test
+    void getTimeRecordsRejectsForeignEmployeeForNonAdmin() {
+        JwtPrincipal principal = new JwtPrincipal(2L, "employee", Role.EMPLOYEE);
+
+        assertThatThrownBy(() -> timeRecordService.getTimeRecords(principal, 3L, null, null))
+                .isInstanceOf(ForbiddenException.class)
+                .hasMessageContaining("Cannot view time records of another employee");
+    }
+
+    @Test
+    void getTimeRecordsRejectsInvalidPeriod() {
+        JwtPrincipal principal = new JwtPrincipal(1L, "admin", Role.ADMIN);
+        LocalDateTime from = LocalDateTime.of(2026, 5, 1, 12, 0);
+        LocalDateTime to = LocalDateTime.of(2026, 5, 1, 11, 0);
+
+        assertThatThrownBy(() -> timeRecordService.getTimeRecords(principal, null, from, to))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("to must be after from");
+    }
+
     private CreateTimeRecordDto request(Long employeeId, Long taskId) {
         LocalDateTime start = LocalDateTime.of(2026, 5, 1, 9, 0);
         return new CreateTimeRecordDto(
@@ -191,5 +244,17 @@ class TimeRecordServiceTest {
         task.setId(id);
         task.setStatus(status);
         return task;
+    }
+
+    private TimeRecord record(Long id, Long employeeId, Long taskId, LocalDateTime startTime) {
+        return new TimeRecord(
+                id,
+                employeeId,
+                taskId,
+                startTime,
+                startTime.plusHours(2),
+                "Implementation",
+                startTime.plusHours(3)
+        );
     }
 }

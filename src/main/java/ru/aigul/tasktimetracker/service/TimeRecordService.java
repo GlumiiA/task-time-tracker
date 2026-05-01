@@ -16,6 +16,9 @@ import ru.aigul.tasktimetracker.repository.EmployeeRepository;
 import ru.aigul.tasktimetracker.repository.TaskRepository;
 import ru.aigul.tasktimetracker.repository.TimeRecordRepository;
 
+import java.time.LocalDateTime;
+import java.util.List;
+
 @Service
 @RequiredArgsConstructor
 public class TimeRecordService {
@@ -64,6 +67,24 @@ public class TimeRecordService {
         return createTimeRecord(request, null);
     }
 
+    public List<TimeRecord> getTimeRecords(JwtPrincipal principal, Long employeeId, LocalDateTime from, LocalDateTime to) {
+        validatePrincipal(principal);
+        validatePeriod(from, to);
+
+        if (principal.getRole() != Role.ADMIN) {
+            if (employeeId != null && !principal.getId().equals(employeeId)) {
+                throw new ForbiddenException("Cannot view time records of another employee");
+            }
+            return filterByPeriod(timeRecordRepository.findByEmployeeId(principal.getId()), from, to);
+        }
+
+        if (employeeId != null) {
+            return filterByPeriod(timeRecordRepository.findByEmployeeId(employeeId), from, to);
+        }
+
+        return filterByPeriod(timeRecordRepository.findAll(), from, to);
+    }
+
     private void validateRequest(CreateTimeRecordDto request) {
         if (request == null) {
             throw new BadRequestException("request is required");
@@ -94,6 +115,25 @@ public class TimeRecordService {
         if (principal.getRole() != Role.ADMIN && !principal.getId().equals(employeeId)) {
             throw new ForbiddenException("Cannot create time record for another employee");
         }
+    }
+
+    private void validatePrincipal(JwtPrincipal principal) {
+        if (principal == null || principal.getId() == null || principal.getRole() == null) {
+            throw new BadRequestException("Invalid authenticated user");
+        }
+    }
+
+    private void validatePeriod(LocalDateTime from, LocalDateTime to) {
+        if (from != null && to != null && to.isBefore(from)) {
+            throw new BadRequestException("to must be after from");
+        }
+    }
+
+    private List<TimeRecord> filterByPeriod(List<TimeRecord> records, LocalDateTime from, LocalDateTime to) {
+        return records.stream()
+                .filter(record -> from == null || !record.getStartTime().isBefore(from))
+                .filter(record -> to == null || !record.getEndTime().isAfter(to))
+                .toList();
     }
 
     private void validatePositive(Long value, String field) {

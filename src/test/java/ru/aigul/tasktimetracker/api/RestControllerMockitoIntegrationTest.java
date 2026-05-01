@@ -13,6 +13,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.web.context.request.RequestAttributes;
 import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
 import org.springframework.web.bind.support.WebDataBinderFactory;
 import org.springframework.web.context.request.NativeWebRequest;
@@ -58,6 +59,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @ExtendWith(MockitoExtension.class)
 class RestControllerMockitoIntegrationTest {
 
+    private static final String CURRENT_PRINCIPAL_ATTRIBUTE = "currentPrincipal";
+
     @Mock
     AuthService authService;
 
@@ -79,8 +82,6 @@ class RestControllerMockitoIntegrationTest {
     MockMvc mockMvc;
 
     ObjectMapper objectMapper;
-
-    JwtPrincipal currentPrincipal;
 
     @BeforeEach
     void setUp() {
@@ -119,7 +120,7 @@ class RestControllerMockitoIntegrationTest {
         JwtPrincipal principal = new JwtPrincipal(1L, "admin", Role.ADMIN);
         Task task = task(10L, "API tests", Status.NEW, 2L);
         TaskDto dto = taskDto(task);
-        when(taskService.createTask("API tests", "Cover REST endpoints", 2L, 1L)).thenReturn(task);
+        when(taskService.createTask("API tests", "Cover REST endpoints", 2L, principal)).thenReturn(task);
         when(taskMapper.toDto(task)).thenReturn(dto);
 
         mockMvc.perform(post("/api/tasks")
@@ -132,6 +133,18 @@ class RestControllerMockitoIntegrationTest {
                 .andExpect(jsonPath("$.id").value(10))
                 .andExpect(jsonPath("$.title").value("API tests"))
                 .andExpect(jsonPath("$.status").value("NEW"));
+    }
+
+    @Test
+    void getTaskByIdReturnsTask() throws Exception {
+        Task task = task(10L, "API tests", Status.NEW, 2L);
+        when(taskService.getTaskOrThrow(10L)).thenReturn(task);
+        when(taskMapper.toDto(task)).thenReturn(taskDto(task));
+
+        mockMvc.perform(get("/api/tasks/10"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(10))
+                .andExpect(jsonPath("$.title").value("API tests"));
     }
 
     @Test
@@ -151,12 +164,25 @@ class RestControllerMockitoIntegrationTest {
     }
 
     @Test
+    void deleteTaskReturnsNoContent() throws Exception {
+        JwtPrincipal principal = new JwtPrincipal(1L, "admin", Role.ADMIN);
+
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete("/api/tasks/10")
+                        .with(principal(principal)))
+                .andExpect(status().isNoContent());
+
+        verify(taskService).deleteTask(10L, principal);
+    }
+
+    @Test
     void updateTaskReturnsUpdatedTask() throws Exception {
+        JwtPrincipal principal = new JwtPrincipal(1L, "admin", Role.ADMIN);
         Task task = task(10L, "Updated", Status.IN_PROGRESS, 2L);
-        when(taskService.updateTask(10L, "Updated", "New description")).thenReturn(task);
+        when(taskService.updateTask(10L, "Updated", "New description", principal)).thenReturn(task);
         when(taskMapper.toDto(task)).thenReturn(taskDto(task));
 
         mockMvc.perform(put("/api/tasks/10")
+                        .with(principal(principal))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(
                                 new UpdateTaskDto("Updated", "New description")
@@ -167,18 +193,21 @@ class RestControllerMockitoIntegrationTest {
 
     @Test
     void updateStatusAndAssigneeDelegateToService() throws Exception {
+        JwtPrincipal principal = new JwtPrincipal(1L, "admin", Role.ADMIN);
         mockMvc.perform(patch("/api/tasks/10/status")
+                        .with(principal(principal))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(new UpdateStatusDto(Status.DONE))))
                 .andExpect(status().isOk());
 
         mockMvc.perform(patch("/api/tasks/10/assignee")
+                        .with(principal(principal))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(new AssignTaskDto(2L))))
                 .andExpect(status().isOk());
 
-        verify(taskService).updateStatus(10L, Status.DONE);
-        verify(taskService).assignTask(10L, 2L);
+        verify(taskService).updateStatus(10L, Status.DONE, principal);
+        verify(taskService).assignTask(10L, 2L, principal);
     }
 
     @Test
@@ -207,9 +236,27 @@ class RestControllerMockitoIntegrationTest {
                 .andExpect(jsonPath("$.taskId").value(10));
     }
 
+    @Test
+    void getTimeRecordsReturnsFilteredRecords() throws Exception {
+        JwtPrincipal principal = new JwtPrincipal(1L, "admin", Role.ADMIN);
+        LocalDateTime start = LocalDateTime.of(2026, 5, 1, 9, 0);
+        TimeRecord record = new TimeRecord(20L, 2L, 10L, start, start.plusHours(2), "Work log", start.plusHours(3));
+        when(timeRecordService.getTimeRecords(principal, 2L, start, start.plusHours(4))).thenReturn(List.of(record));
+        when(timeRecordMapper.toDto(record)).thenReturn(new TimeRecordDto(20L, 2L, 10L, start, start.plusHours(2), "Work log", start.plusHours(3)));
+
+        mockMvc.perform(get("/api/time-records")
+                        .with(principal(principal))
+                        .param("employeeId", "2")
+                        .param("from", "2026-05-01T09:00:00")
+                        .param("to", "2026-05-01T13:00:00"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].id").value(20))
+                .andExpect(jsonPath("$[0].employeeId").value(2));
+    }
+
     private RequestPostProcessor principal(JwtPrincipal principal) {
         return request -> {
-            currentPrincipal = principal;
+            request.setAttribute(CURRENT_PRINCIPAL_ATTRIBUTE, principal);
             return request;
         };
     }
@@ -245,7 +292,7 @@ class RestControllerMockitoIntegrationTest {
                 NativeWebRequest webRequest,
                 WebDataBinderFactory binderFactory
         ) {
-            return currentPrincipal;
+            return webRequest.getAttribute(CURRENT_PRINCIPAL_ATTRIBUTE, RequestAttributes.SCOPE_REQUEST);
         }
     }
 }
