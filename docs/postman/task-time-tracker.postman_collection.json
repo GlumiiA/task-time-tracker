@@ -282,7 +282,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"status\": \"DONE\"\n}"
+          "raw": "{\n  \"status\": \"IN_PROGRESS\"\n}"
         },
         "url": {
           "raw": "{{baseUrl}}/api/tasks/{{taskId}}/status",
@@ -348,6 +348,61 @@
               "  const body = pm.response.json();",
               "  pm.expect(body.id).to.exist;",
               "  pm.expect(body.taskId).to.eql(Number(pm.collectionVariables.get('taskId')));",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    }
+    ,
+    {
+      "name": "Time Records - Summary",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/time-records/summary?employeeId={{employeeId}}&from=2026-05-01T09:00:00&to=2026-05-01T18:00:00",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "time-records",
+            "summary"
+          ],
+          "query": [
+            {
+              "key": "employeeId",
+              "value": "{{employeeId}}"
+            },
+            {
+              "key": "from",
+              "value": "2026-05-01T09:00:00"
+            },
+            {
+              "key": "to",
+              "value": "2026-05-01T18:00:00"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', function () {",
+              "  pm.response.to.have.status(200);",
+              "});",
+              "pm.test('Summary contains totalHours', function () {",
+              "  const body = pm.response.json();",
+              "  pm.expect(body.totalHours).to.exist;",
               "});"
             ],
             "type": "text/javascript"

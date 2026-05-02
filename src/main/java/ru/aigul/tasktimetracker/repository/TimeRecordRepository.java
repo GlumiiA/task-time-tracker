@@ -15,7 +15,7 @@ public interface TimeRecordRepository {
      *
      * @return число вставленных строк (0 если задача не DONE)
      */
-    int insertIfTaskDone(TimeRecord timeRecord);
+    int insertIfTaskInProgressOrReview(TimeRecord timeRecord);
 
     TimeRecord findById(@Param("id") long id);
 

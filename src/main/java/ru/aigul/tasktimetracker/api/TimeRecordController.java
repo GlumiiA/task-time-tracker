@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.RestController;
 import ru.aigul.tasktimetracker.auth.JwtPrincipal;
 import ru.aigul.tasktimetracker.dto.CreateTimeRecordDto;
 import ru.aigul.tasktimetracker.dto.TimeRecordDto;
+import ru.aigul.tasktimetracker.dto.TimeRecordSummaryDto;
 import ru.aigul.tasktimetracker.entity.TimeRecord;
 import ru.aigul.tasktimetracker.mapper.TimeRecordMapper;
 import ru.aigul.tasktimetracker.service.TimeRecordService;
@@ -50,5 +51,15 @@ public class TimeRecordController {
         return timeRecordService.getTimeRecords(principal, employeeId, from, to).stream()
                 .map(timeRecordMapper::toDto)
                 .toList();
+    }
+
+    @GetMapping("/summary")
+    public TimeRecordSummaryDto getTimeSummary(
+            @AuthenticationPrincipal JwtPrincipal principal,
+            @RequestParam Long employeeId,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime from,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime to
+    ) {
+        return timeRecordService.getTimeSummary(principal, employeeId, from, to);
     }
 }

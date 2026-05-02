@@ -17,14 +17,14 @@
       Создаёт запись времени только если связанная задача находится в статусе DONE.
       Возвращает число вставленных строк (0 если задача не DONE).
     -->
-    <insert id="insertIfTaskDone" parameterType="ru.aigul.tasktimetracker.entity.TimeRecord" useGeneratedKeys="true" keyProperty="id">
+    <insert id="insertIfTaskInProgressOrReview" parameterType="ru.aigul.tasktimetracker.entity.TimeRecord" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO time_records (employee_id, task_id, start_time, end_time, work_description, created_at)
         SELECT #{employeeId}, #{taskId}, #{startTime}, #{endTime}, #{workDescription}, CURRENT_TIMESTAMP
         WHERE EXISTS (
             SELECT 1
             FROM tasks t
             WHERE t.id = #{taskId}
-              AND t.status = 'DONE'
+              AND t.status IN ('IN_PROGRESS', 'REVIEW')
         )
     </insert>
 

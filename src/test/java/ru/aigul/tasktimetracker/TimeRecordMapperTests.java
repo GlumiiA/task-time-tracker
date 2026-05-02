@@ -48,45 +48,77 @@ class TimeRecordMapperTests {
 	TimeRecordRepository timeRecordRepository;
 
 	@Test
-	void shouldInsertTimeRecordOnlyForDoneTasks() {
-		Employee employee = new Employee(null, "Test User", "test.user", "secret", Role.EMPLOYEE);
-		employeeRepository.insert(employee);
-		assertThat(employee.getId()).isNotNull();
+    void shouldInsertTimeRecordOnlyForInProgressOrReviewTasks() {
+        Employee employee = new Employee(null, "Test User", "test.user", "secret", Role.EMPLOYEE);
+        employeeRepository.insert(employee);
+        assertThat(employee.getId()).isNotNull();
 
-		Task doneTask = new Task();
-		doneTask.setTitle("Done task");
-		doneTask.setDescription("desc");
-		doneTask.setStatus(Status.DONE);
-		taskRepository.insert(doneTask);
-		assertThat(doneTask.getId()).isNotNull();
+        Task inProgressTask = new Task();
+        inProgressTask.setTitle("In progress task");
+        inProgressTask.setDescription("desc");
+        inProgressTask.setStatus(Status.IN_PROGRESS);
+        taskRepository.insert(inProgressTask);
+        assertThat(inProgressTask.getId()).isNotNull();
 
-		Task newTask = new Task();
-		newTask.setTitle("New task");
-		newTask.setDescription("desc");
-		newTask.setStatus(Status.NEW);
-		taskRepository.insert(newTask);
-		assertThat(newTask.getId()).isNotNull();
+        Task reviewTask = new Task();
+        reviewTask.setTitle("Review task");
+        reviewTask.setDescription("desc");
+        reviewTask.setStatus(Status.REVIEW);
+        taskRepository.insert(reviewTask);
+        assertThat(reviewTask.getId()).isNotNull();
 
-		LocalDateTime now = LocalDateTime.now();
+        Task newTask = new Task();
+        newTask.setTitle("New task");
+        newTask.setDescription("desc");
+        newTask.setStatus(Status.NEW);
+        taskRepository.insert(newTask);
+        assertThat(newTask.getId()).isNotNull();
 
-		TimeRecord ok = new TimeRecord();
-		ok.setEmployeeId(employee.getId());
-		ok.setTaskId(doneTask.getId());
-		ok.setStartTime(now.minusHours(2));
-		ok.setEndTime(now.minusHours(1));
-		ok.setWorkDescription("work");
-		int insertedOk = timeRecordRepository.insertIfTaskDone(ok);
-		assertThat(insertedOk).isEqualTo(1);
+        Task blockedTask = new Task();
+        blockedTask.setTitle("Blocked task");
+        blockedTask.setDescription("desc");
+        blockedTask.setStatus(Status.BLOCKED);
+        taskRepository.insert(blockedTask);
+        assertThat(blockedTask.getId()).isNotNull();
 
-		TimeRecord notOk = new TimeRecord();
-		notOk.setEmployeeId(employee.getId());
-		notOk.setTaskId(newTask.getId());
-		notOk.setStartTime(now.minusHours(2));
-		notOk.setEndTime(now.minusHours(1));
-		notOk.setWorkDescription("work");
-		int insertedNotOk = timeRecordRepository.insertIfTaskDone(notOk);
-		assertThat(insertedNotOk).isEqualTo(0);
-	}
+        LocalDateTime now = LocalDateTime.now();
+
+        TimeRecord ok = new TimeRecord();
+        ok.setEmployeeId(employee.getId());
+        ok.setTaskId(inProgressTask.getId());
+        ok.setStartTime(now.minusHours(3));
+        ok.setEndTime(now.minusHours(2));
+        ok.setWorkDescription("work");
+        int insertedOk = timeRecordRepository.insertIfTaskInProgressOrReview(ok);
+        assertThat(insertedOk).isEqualTo(1);
+
+        TimeRecord reviewOk = new TimeRecord();
+        reviewOk.setEmployeeId(employee.getId());
+        reviewOk.setTaskId(reviewTask.getId());
+        reviewOk.setStartTime(now.minusHours(2));
+        reviewOk.setEndTime(now.minusHours(1));
+        reviewOk.setWorkDescription("work");
+        int insertedReviewOk = timeRecordRepository.insertIfTaskInProgressOrReview(reviewOk);
+        assertThat(insertedReviewOk).isEqualTo(1);
+
+        TimeRecord notOk = new TimeRecord();
+        notOk.setEmployeeId(employee.getId());
+        notOk.setTaskId(newTask.getId());
+        notOk.setStartTime(now.minusHours(1));
+        notOk.setEndTime(now);
+        notOk.setWorkDescription("work");
+        int insertedNotOk = timeRecordRepository.insertIfTaskInProgressOrReview(notOk);
+        assertThat(insertedNotOk).isEqualTo(0);
+
+        TimeRecord blockedNotOk = new TimeRecord();
+        blockedNotOk.setEmployeeId(employee.getId());
+        blockedNotOk.setTaskId(blockedTask.getId());
+        blockedNotOk.setStartTime(now.minusHours(1));
+        blockedNotOk.setEndTime(now);
+        blockedNotOk.setWorkDescription("work");
+        int insertedBlockedNotOk = timeRecordRepository.insertIfTaskInProgressOrReview(blockedNotOk);
+        assertThat(insertedBlockedNotOk).isEqualTo(0);
+    }
 }
 
 

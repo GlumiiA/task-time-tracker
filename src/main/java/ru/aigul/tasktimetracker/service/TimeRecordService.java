@@ -4,7 +4,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import ru.aigul.tasktimetracker.auth.JwtPrincipal;
 import ru.aigul.tasktimetracker.dto.CreateTimeRecordDto;
+import ru.aigul.tasktimetracker.dto.TimeRecordSummaryDto;
 import ru.aigul.tasktimetracker.entity.Role;
+import ru.aigul.tasktimetracker.entity.Status;
 import ru.aigul.tasktimetracker.entity.Task;
 import ru.aigul.tasktimetracker.entity.TimeRecord;
 import ru.aigul.tasktimetracker.exception.BadRequestException;
@@ -16,6 +18,9 @@ import ru.aigul.tasktimetracker.repository.EmployeeRepository;
 import ru.aigul.tasktimetracker.repository.TaskRepository;
 import ru.aigul.tasktimetracker.repository.TimeRecordRepository;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -39,6 +44,9 @@ public class TimeRecordService {
         if (task == null) {
             throw new NotFoundException("Task not found: " + request.taskId());
         }
+        if (!isRecordableStatus(task.getStatus())) {
+            throw new ConflictException("Task must be IN_PROGRESS or REVIEW to create time record");
+        }
 
         TimeRecord record = new TimeRecord(
                 null,
@@ -50,9 +58,9 @@ public class TimeRecordService {
                 null
         );
 
-        int inserted = timeRecordRepository.insertIfTaskDone(record);
+        int inserted = timeRecordRepository.insertIfTaskInProgressOrReview(record);
         if (inserted == 0) {
-            throw new ConflictException("Task must be DONE to create time record");
+            throw new ConflictException("Task must be IN_PROGRESS or REVIEW to create time record");
         }
 
         TimeRecord saved = timeRecordRepository.findById(record.getId());
@@ -83,6 +91,29 @@ public class TimeRecordService {
         }
 
         return filterByPeriod(timeRecordRepository.findAll(), from, to);
+    }
+
+    public TimeRecordSummaryDto getTimeSummary(
+            JwtPrincipal principal,
+            Long employeeId,
+            LocalDateTime from,
+            LocalDateTime to
+    ) {
+        validatePrincipal(principal);
+        validatePositive(employeeId, "employeeId");
+        validatePeriod(from, to);
+
+        if (principal.getRole() != Role.ADMIN && !principal.getId().equals(employeeId)) {
+            throw new ForbiddenException("Cannot view time records of another employee");
+        }
+
+        List<TimeRecord> records = timeRecordRepository.findByEmployeeAndPeriod(employeeId, from, to);
+        BigDecimal totalHours = records.stream()
+                .map(this::toHours)
+                .reduce(BigDecimal.ZERO, BigDecimal::add)
+                .setScale(2, RoundingMode.HALF_UP);
+
+        return new TimeRecordSummaryDto(employeeId, from, to, totalHours);
     }
 
     private void validateRequest(CreateTimeRecordDto request) {
@@ -134,6 +165,15 @@ public class TimeRecordService {
                 .filter(record -> from == null || !record.getStartTime().isBefore(from))
                 .filter(record -> to == null || !record.getEndTime().isAfter(to))
                 .toList();
+    }
+
+    private BigDecimal toHours(TimeRecord record) {
+        long minutes = Duration.between(record.getStartTime(), record.getEndTime()).toMinutes();
+        return BigDecimal.valueOf(minutes).divide(BigDecimal.valueOf(60), 2, RoundingMode.HALF_UP);
+    }
+
+    private boolean isRecordableStatus(Status status) {
+        return status == Status.IN_PROGRESS || status == Status.REVIEW;
     }
 
     private void validatePositive(Long value, String field) {

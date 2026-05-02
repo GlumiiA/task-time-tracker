@@ -33,12 +33,12 @@ else employee exists
         service --> controller: NotFoundException
         controller --> employee: 404 Not Found
     else task exists
-        service -> timeRecordRepo: insertIfTaskDone(record)
-        timeRecordRepo -> db: INSERT ... WHERE task.status = 'DONE'
+        service -> timeRecordRepo: insertIfTaskInProgressOrReview(record)
+        timeRecordRepo -> db: INSERT ... WHERE task.status IN ('IN_PROGRESS', 'REVIEW')
         db --> timeRecordRepo: inserted rows count
         timeRecordRepo --> service: count
 
-        alt task status is not DONE
+        alt task status is not IN_PROGRESS or REVIEW
             service --> controller: ConflictException
             controller --> employee: 409 Conflict
         else record created

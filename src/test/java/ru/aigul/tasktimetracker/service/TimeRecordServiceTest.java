@@ -7,6 +7,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import ru.aigul.tasktimetracker.auth.JwtPrincipal;
 import ru.aigul.tasktimetracker.dto.CreateTimeRecordDto;
+import ru.aigul.tasktimetracker.dto.TimeRecordSummaryDto;
 import ru.aigul.tasktimetracker.entity.Role;
 import ru.aigul.tasktimetracker.entity.Status;
 import ru.aigul.tasktimetracker.entity.Task;
@@ -21,6 +22,7 @@ import ru.aigul.tasktimetracker.repository.TaskRepository;
 import ru.aigul.tasktimetracker.repository.TimeRecordRepository;
 
 import java.time.LocalDateTime;
+import java.math.BigDecimal;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -46,12 +48,12 @@ class TimeRecordServiceTest {
     TimeRecordService timeRecordService;
 
     @Test
-    void createTimeRecordPersistsRecordForDoneTask() {
+    void createTimeRecordPersistsRecordForInProgressTask() {
         CreateTimeRecordDto request = request(2L, 5L);
         JwtPrincipal principal = new JwtPrincipal(2L, "employee", Role.EMPLOYEE);
         when(employeeRepository.existsById(2L)).thenReturn(true);
-        when(taskRepository.findById(5L)).thenReturn(task(5L, Status.DONE));
-        when(timeRecordRepository.insertIfTaskDone(any(TimeRecord.class))).thenAnswer(invocation -> {
+        when(taskRepository.findById(5L)).thenReturn(task(5L, Status.IN_PROGRESS));
+        when(timeRecordRepository.insertIfTaskInProgressOrReview(any(TimeRecord.class))).thenAnswer(invocation -> {
             TimeRecord record = invocation.getArgument(0);
             record.setId(15L);
             return 1;
@@ -71,7 +73,36 @@ class TimeRecordServiceTest {
         TimeRecord result = timeRecordService.createTimeRecord(request, principal);
 
         assertThat(result).isSameAs(saved);
-        verify(timeRecordRepository).insertIfTaskDone(any(TimeRecord.class));
+        verify(timeRecordRepository).insertIfTaskInProgressOrReview(any(TimeRecord.class));
+    }
+
+    @Test
+    void createTimeRecordPersistsRecordForReviewTask() {
+        CreateTimeRecordDto request = request(2L, 5L);
+        JwtPrincipal principal = new JwtPrincipal(2L, "employee", Role.EMPLOYEE);
+        when(employeeRepository.existsById(2L)).thenReturn(true);
+        when(taskRepository.findById(5L)).thenReturn(task(5L, Status.REVIEW));
+        when(timeRecordRepository.insertIfTaskInProgressOrReview(any(TimeRecord.class))).thenAnswer(invocation -> {
+            TimeRecord record = invocation.getArgument(0);
+            record.setId(15L);
+            return 1;
+        });
+
+        TimeRecord saved = new TimeRecord(
+                15L,
+                request.employeeId(),
+                request.taskId(),
+                request.startTime(),
+                request.endTime(),
+                request.workDescription(),
+                LocalDateTime.now()
+        );
+        when(timeRecordRepository.findById(15L)).thenReturn(saved);
+
+        TimeRecord result = timeRecordService.createTimeRecord(request, principal);
+
+        assertThat(result).isSameAs(saved);
+        verify(timeRecordRepository).insertIfTaskInProgressOrReview(any(TimeRecord.class));
     }
 
     @Test
@@ -84,19 +115,20 @@ class TimeRecordServiceTest {
                 .hasMessageContaining("Cannot create time record");
 
         verify(employeeRepository, never()).existsById(3L);
-        verify(timeRecordRepository, never()).insertIfTaskDone(any(TimeRecord.class));
+        verify(timeRecordRepository, never()).insertIfTaskInProgressOrReview(any(TimeRecord.class));
     }
 
     @Test
-    void createTimeRecordFailsWhenRepositoryRejectsTaskStatus() {
+    void createTimeRecordFailsWhenTaskIsNotRecordable() {
         CreateTimeRecordDto request = request(2L, 5L);
         when(employeeRepository.existsById(2L)).thenReturn(true);
-        when(taskRepository.findById(5L)).thenReturn(task(5L, Status.NEW));
-        when(timeRecordRepository.insertIfTaskDone(any(TimeRecord.class))).thenReturn(0);
+        when(taskRepository.findById(5L)).thenReturn(task(5L, Status.DONE));
 
         assertThatThrownBy(() -> timeRecordService.createTimeRecord(request))
                 .isInstanceOf(ConflictException.class)
-                .hasMessageContaining("Task must be DONE");
+                .hasMessageContaining("Task must be IN_PROGRESS or REVIEW");
+
+        verify(timeRecordRepository, never()).insertIfTaskInProgressOrReview(any(TimeRecord.class));
     }
 
     @Test
@@ -126,8 +158,8 @@ class TimeRecordServiceTest {
     void createTimeRecordFailsWhenSavedRecordCannotBeLoaded() {
         CreateTimeRecordDto request = request(2L, 5L);
         when(employeeRepository.existsById(2L)).thenReturn(true);
-        when(taskRepository.findById(5L)).thenReturn(task(5L, Status.DONE));
-        when(timeRecordRepository.insertIfTaskDone(any(TimeRecord.class))).thenAnswer(invocation -> {
+        when(taskRepository.findById(5L)).thenReturn(task(5L, Status.IN_PROGRESS));
+        when(timeRecordRepository.insertIfTaskInProgressOrReview(any(TimeRecord.class))).thenAnswer(invocation -> {
             TimeRecord record = invocation.getArgument(0);
             record.setId(15L);
             return 1;
@@ -226,6 +258,35 @@ class TimeRecordServiceTest {
         assertThatThrownBy(() -> timeRecordService.getTimeRecords(principal, null, from, to))
                 .isInstanceOf(BadRequestException.class)
                 .hasMessageContaining("to must be after from");
+    }
+
+    @Test
+    void getTimeSummaryReturnsTotalHoursForAdmin() {
+        JwtPrincipal principal = new JwtPrincipal(1L, "admin", Role.ADMIN);
+        LocalDateTime from = LocalDateTime.of(2026, 5, 1, 9, 0);
+        LocalDateTime to = LocalDateTime.of(2026, 5, 1, 18, 0);
+        TimeRecord first = new TimeRecord(1L, 2L, 5L, from, from.plusHours(2), "Implementation", from.plusHours(2));
+        TimeRecord second = new TimeRecord(2L, 2L, 6L, from.plusHours(4), from.plusHours(6), "Review fixes", from.plusHours(6));
+        when(timeRecordRepository.findByEmployeeAndPeriod(2L, from, to)).thenReturn(List.of(first, second));
+
+        TimeRecordSummaryDto result = timeRecordService.getTimeSummary(principal, 2L, from, to);
+
+        assertThat(result.employeeId()).isEqualTo(2L);
+        assertThat(result.totalHours()).isEqualByComparingTo(new BigDecimal("4.00"));
+        verify(timeRecordRepository).findByEmployeeAndPeriod(2L, from, to);
+    }
+
+    @Test
+    void getTimeSummaryRejectsForeignEmployeeForNonAdmin() {
+        JwtPrincipal principal = new JwtPrincipal(2L, "employee", Role.EMPLOYEE);
+        LocalDateTime from = LocalDateTime.of(2026, 5, 1, 9, 0);
+        LocalDateTime to = LocalDateTime.of(2026, 5, 1, 18, 0);
+
+        assertThatThrownBy(() -> timeRecordService.getTimeSummary(principal, 3L, from, to))
+                .isInstanceOf(ForbiddenException.class)
+                .hasMessageContaining("Cannot view time records of another employee");
+
+        verify(timeRecordRepository, never()).findByEmployeeAndPeriod(any(Long.class), any(LocalDateTime.class), any(LocalDateTime.class));
     }
 
     private CreateTimeRecordDto request(Long employeeId, Long taskId) {

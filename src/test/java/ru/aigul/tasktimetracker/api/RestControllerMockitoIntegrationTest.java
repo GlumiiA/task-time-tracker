@@ -27,6 +27,7 @@ import ru.aigul.tasktimetracker.dto.LoginRequestDto;
 import ru.aigul.tasktimetracker.dto.LoginResponseDto;
 import ru.aigul.tasktimetracker.dto.TaskDto;
 import ru.aigul.tasktimetracker.dto.TimeRecordDto;
+import ru.aigul.tasktimetracker.dto.TimeRecordSummaryDto;
 import ru.aigul.tasktimetracker.dto.UpdateStatusDto;
 import ru.aigul.tasktimetracker.dto.UpdateTaskDto;
 import ru.aigul.tasktimetracker.entity.Role;
@@ -252,6 +253,23 @@ class RestControllerMockitoIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].id").value(20))
                 .andExpect(jsonPath("$[0].employeeId").value(2));
+    }
+
+    @Test
+    void getTimeSummaryReturnsTotals() throws Exception {
+        JwtPrincipal principal = new JwtPrincipal(1L, "admin", Role.ADMIN);
+        LocalDateTime start = LocalDateTime.of(2026, 5, 1, 9, 0);
+        TimeRecordSummaryDto summary = new TimeRecordSummaryDto(2L, start, start.plusHours(4), new java.math.BigDecimal("4.00"));
+        when(timeRecordService.getTimeSummary(principal, 2L, start, start.plusHours(4))).thenReturn(summary);
+
+        mockMvc.perform(get("/api/time-records/summary")
+                        .with(principal(principal))
+                        .param("employeeId", "2")
+                        .param("from", "2026-05-01T09:00:00")
+                        .param("to", "2026-05-01T13:00:00"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.employeeId").value(2))
+                .andExpect(jsonPath("$.totalHours").value(4.0));
     }
 
     private RequestPostProcessor principal(JwtPrincipal principal) {
